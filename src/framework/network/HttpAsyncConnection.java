@@ -25,8 +25,8 @@ abstract public class HttpAsyncConnection extends AsyncTask<Void, Void, String> 
 	private HttpURLConnection conn;
 	private StringBuffer message = new StringBuffer();
 	protected Activity activity = null;
+	private String method;
 	private static String clientSessionID = null;
-
 
 	public HttpAsyncConnection(String url) {
 		try {
@@ -39,6 +39,7 @@ abstract public class HttpAsyncConnection extends AsyncTask<Void, Void, String> 
 			e.printStackTrace();
 		}
 	}
+	
 	public HttpAsyncConnection(String url,Activity activity) {
 		this(url);
 		this.activity = activity;
@@ -52,39 +53,57 @@ abstract public class HttpAsyncConnection extends AsyncTask<Void, Void, String> 
 			e.printStackTrace();
 		}
 	}
+	
+	public void doPost() {
+		setMethod("POST");
+		execute();
+	}
+	
+	public void doGet() {
+		setMethod("GET");
+		execute();
+	}
+	
+	public void doPut() {
+		setMethod("PUT");
+		execute();
+	}
+	
+	public void doDelete() {
+		setMethod("DELETE");
+		execute();
+	}
 
+	private void setMethod(String method) {
+		this.method = method;
+	}
+	
 	@Override
 	protected String doInBackground(Void... urls) {
-		doPost();
-		return doGet();
+		doAnything();
+		return doReceive();
 	}
 
-	// Parse XML
-	public void onPostExecute(String result) {
-	//	CLLog.debug(""+result);
-		DocumentBuilderFactory  factory = DocumentBuilderFactory.newInstance();
-		try {
-			DocumentBuilder builder = factory.newDocumentBuilder();
-			InputSource is = new InputSource();
-			is.setCharacterStream(new StringReader(result));
-			Document dom = builder.parse(is);
-			Element root = dom.getDocumentElement();
-			receive(root);
-		}catch(Exception e)  {
-			e.printStackTrace();
-		}
+	/* (non-Javadoc)
+	 * @see android.os.AsyncTask#onPostExecute(java.lang.Object)
+	 */
+	public void onPostExecute(String response) {
+		receive(response);
 	}
 
-	abstract protected void receive(Element root);
+	/**
+	 * サーバからの応答を受信する
+	 * @param response サーバからの応答
+	 */
+	abstract protected void receive(String response);
 
 	// request
-	public void doPost() {
+	public void doAnything() {
 		try {
 			conn.setReadTimeout(10000 /* milliseconds */);
 			conn.setConnectTimeout(15000 /* milliseconds */);
-			// POST or GET
-			conn.setRequestMethod("POST");
-			//conn.setRequestMethod("GET");
+			// POST or GET or PUT or DELETE
+			conn.setRequestMethod(method);
 
 			conn.setDoOutput(true);
 			if(clientSessionID != null) {
@@ -108,7 +127,7 @@ abstract public class HttpAsyncConnection extends AsyncTask<Void, Void, String> 
 	}
 
 	// response
-	public String doGet() {
+	public String doReceive() {
 		BufferedReader reader;
 		try {
 			reader = new BufferedReader(new InputStreamReader(conn.getInputStream()));
